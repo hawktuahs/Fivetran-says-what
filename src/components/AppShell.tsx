@@ -26,12 +26,20 @@ export function AppShell({ state, busy, error, onStartMission, onApprove, onReje
             <DatabaseZap size={18} />
           </span>
           <div>
-            <h1>SurgePilot</h1>
-            <p>Gemini-style operations agent for match-day demand.</p>
+          <h1>SurgePilot</h1>
+            <p>Gemini + Fivetran MCP operations agent.</p>
           </div>
         </div>
         <div className="topbar-status">
-          <span className="mode-chip">{state.fivetranMode === "demo" ? "Demo Fivetran MCP" : "Live Fivetran MCP"}</span>
+          <span className="mode-chip">
+            {state.mission.reasoning?.mode === "deterministic"
+              ? "Gemini fallback"
+              : state.geminiMode === "live"
+                ? "Gemini API configured"
+                : "Gemini fallback"}{" "}
+            · {state.geminiModel}
+          </span>
+          <span className="mode-chip">{state.fivetranTransport === "mcp-demo" ? "Fivetran MCP demo" : "Fivetran MCP live"}</span>
           <span className={`status-chip status-${state.mission.status}`}>
             <Activity size={14} />
             {state.mission.status.replaceAll("_", " ")}

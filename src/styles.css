@@ -325,6 +325,7 @@ h3 {
 .approval-row span,
 .empty-state,
 .forecast-summary,
+.reasoning-box p,
 .audit-row p,
 .text-action p {
   color: var(--muted);
@@ -459,6 +460,20 @@ h3 {
   padding: 10px;
   border-radius: 8px;
   background: #eef4ee;
+}
+
+.reasoning-box {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 11px;
+  border: 1px solid #d9e6ef;
+  border-radius: 8px;
+  background: #f2f7fb;
+}
+
+.reasoning-box h3 {
+  color: var(--blue);
 }
 
 .risk-table,

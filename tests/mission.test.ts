@@ -21,6 +21,8 @@ describe("mission service", () => {
     const updated = await service.approveAction(sync!.id);
 
     expect(updated.actionPack?.reorderItems.length).toBeGreaterThan(0);
-    expect(updated.auditEvents.some((event) => event.tool === "fivetran.triggerSync")).toBe(true);
+    expect(updated.auditEvents.some((event) => event.tool === "mcp.fivetran/trigger_sync")).toBe(true);
+    expect(updated.auditEvents.some((event) => event.tool === "gemini.generateContent")).toBe(true);
+    expect(updated.reasoning?.actionNarrative).toContain("Gemini fallback");
   });
 });

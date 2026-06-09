@@ -2,6 +2,7 @@ import type { ActionPack, ApprovalAction, AppState, MissionState, SeedData } fro
 import { buildForecast } from "./forecast";
 import type { FivetranAdapter } from "./fivetranAdapter";
 import { createAuditEvent } from "./audit";
+import { createGeminiReasoningService, type GeminiReasoningService } from "./geminiReasoning";
 
 const defaultPrompt = "Prepare us for tomorrow's match-day surge with a $2,000 budget.";
 
@@ -61,7 +62,11 @@ function initialMission(connectors = [] as MissionState["connectors"]): MissionS
   };
 }
 
-export function createMissionService(data: SeedData, fivetran: FivetranAdapter) {
+export function createMissionService(
+  data: SeedData,
+  fivetran: FivetranAdapter,
+  reasoningService: GeminiReasoningService = createGeminiReasoningService()
+) {
   let mission = initialMission(data.connectors);
 
   async function refreshConnectors() {
@@ -74,11 +79,15 @@ export function createMissionService(data: SeedData, fivetran: FivetranAdapter) 
   function publish(): AppState {
     return {
       fivetranMode: fivetran.mode,
+      fivetranTransport: fivetran.transport,
+      geminiMode: reasoningService.mode,
+      geminiModel: reasoningService.model,
       mission: {
         ...mission,
         connectors: mission.connectors.map((connector) => ({ ...connector })),
         pendingApprovals: mission.pendingApprovals.map((approval) => ({ ...approval })),
         auditEvents: mission.auditEvents.map((event) => ({ ...event })),
+        reasoning: mission.reasoning ? { ...mission.reasoning } : undefined,
         actionPack: mission.actionPack
           ? {
               ...mission.actionPack,
@@ -100,11 +109,26 @@ export function createMissionService(data: SeedData, fivetran: FivetranAdapter) 
 
   async function completeActionPack() {
     const forecast = buildForecast(data, { budget: mission.budget });
+    const reasoning = await reasoningService.reason({
+      mission: mission.prompt,
+      budget: mission.budget,
+      data,
+      forecast,
+      connectors: mission.connectors
+    });
     const actionPack = buildActionPack(data, mission.budget);
     mission = {
       ...mission,
       status: "awaiting_action_approval",
       forecast,
+      reasoning: {
+        mode: reasoning.mode,
+        model: reasoning.model,
+        actionNarrative: reasoning.actionNarrative,
+        riskNarrative: reasoning.riskNarrative,
+        confidence: reasoning.confidence
+      },
+      plan: reasoning.plan,
       actionPack,
       pendingApprovals: [
         ...mission.pendingApprovals,
@@ -120,6 +144,13 @@ export function createMissionService(data: SeedData, fivetran: FivetranAdapter) 
       ],
       auditEvents: [
         ...mission.auditEvents,
+        createAuditEvent(
+          "agent",
+          "gemini.generateContent",
+          reasoning.mode === "live"
+            ? `Gemini ${reasoning.model} generated the mission plan and action rationale.`
+            : `Deterministic Gemini fallback generated the mission plan because live Gemini was not configured or was unavailable.`
+        ),
         createAuditEvent("agent", "forecast.buildForecast", "Built budget-bounded match-day forecast and action pack.")
       ]
     };
@@ -138,7 +169,7 @@ export function createMissionService(data: SeedData, fivetran: FivetranAdapter) 
         budget: parseBudget(prompt),
         auditEvents: [
           createAuditEvent("manager", "mission.start", prompt),
-          createAuditEvent("agent", "fivetran.listConnectors", "Checked Fivetran MCP connector freshness before recommending actions.")
+          createAuditEvent("agent", "mcp.fivetran/list_connectors", "Checked Fivetran MCP connector freshness before recommending actions.")
         ]
       };
       await refreshConnectors();
@@ -158,7 +189,7 @@ export function createMissionService(data: SeedData, fivetran: FivetranAdapter) 
           ],
           auditEvents: [
             ...mission.auditEvents,
-            createAuditEvent("agent", "fivetran.getConnector", "Inventory connector is stale, so sync requires manager approval.")
+            createAuditEvent("agent", "mcp.fivetran/get_connector", "Inventory connector is stale, so sync requires manager approval.")
           ]
         };
         return mission;
@@ -186,7 +217,7 @@ export function createMissionService(data: SeedData, fivetran: FivetranAdapter) 
           ...mission,
           status: "forecasting",
           pendingApprovals: mission.pendingApprovals.filter((approval) => approval.id !== id),
-          auditEvents: [...mission.auditEvents, createAuditEvent("agent", "fivetran.triggerSync", "Triggered approved inventory sync through Fivetran MCP.")]
+          auditEvents: [...mission.auditEvents, createAuditEvent("agent", "mcp.fivetran/trigger_sync", "Triggered approved inventory sync through Fivetran MCP.")]
         };
         await fivetran.triggerSync("inventory");
         await refreshConnectors();

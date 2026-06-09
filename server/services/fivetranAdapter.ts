@@ -3,6 +3,8 @@ import { seedData } from "../data/seed";
 
 export interface FivetranAdapter {
   mode: "demo" | "live";
+  transport: "mcp-demo" | "mcp-live" | "rest-live";
+  serverName: string;
   listConnectors(): Promise<Connector[]>;
   getConnector(id: string): Promise<Connector>;
   getSyncLogs(id: string): Promise<string[]>;
@@ -24,6 +26,8 @@ export function createDemoFivetranAdapter(): FivetranAdapter {
 
   return {
     mode: "demo",
+    transport: "mcp-demo",
+    serverName: "fivetran-demo",
     async listConnectors() {
       return [...connectors.values()].map(cloneConnector);
     },
@@ -71,6 +75,8 @@ export function createLiveFivetranAdapter(): FivetranAdapter {
 
   return {
     mode: "live",
+    transport: "rest-live",
+    serverName: "fivetran-rest",
     async listConnectors() {
       throw new Error("Live Fivetran MCP adapter is documented but not invoked in the credential-free demo.");
     },

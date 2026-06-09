@@ -13,16 +13,17 @@ Prepare us for tomorrow's match-day surge with a $2,000 budget.
 ```
 
 Show that the interface is an operations console, not a chatbot.
+Call out the top status chips: Gemini is either live through the Gemini API or running in explicit fallback mode, while Fivetran uses the MCP demo transport for credential-free judging.
 
 ## 0:50-1:30 Fivetran MCP
 
-Point to the Fivetran MCP panel. POS and staffing are fresh, but inventory is stale. SurgePilot pauses and asks for approval before triggering a Fivetran inventory sync.
+Point to the Fivetran MCP panel. POS and staffing are fresh, but inventory is stale. SurgePilot pauses and asks for approval before calling the MCP `fivetran.trigger_sync` tool.
 
 Approve `Trigger Fivetran inventory sync` and show the connector becoming fresh.
 
 ## 1:30-2:20 Action Pack
 
-Show the forecast summary, high-risk SKUs, reorder quantities, staffing coverage, campaign copy, and supplier email. Emphasize that the recommendations are budget-bounded and explainable.
+Show the forecast summary, Gemini rationale, high-risk SKUs, reorder quantities, staffing coverage, campaign copy, and supplier email. Emphasize that the recommendations are budget-bounded and explainable.
 
 ## 2:20-2:50 Approval Trail
 

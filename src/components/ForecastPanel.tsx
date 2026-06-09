@@ -42,6 +42,13 @@ export function ForecastPanel({ mission }: ForecastPanelProps) {
       <p className="forecast-summary">
         {forecast?.summary ?? "Run the mission and approve stale-data refresh before recommendations are generated."}
       </p>
+      {mission.reasoning ? (
+        <div className="reasoning-box">
+          <h3>{mission.reasoning.mode === "live" ? "Gemini rationale" : "Gemini fallback rationale"}</h3>
+          <p>{mission.reasoning.actionNarrative}</p>
+          <p>{mission.reasoning.riskNarrative}</p>
+        </div>
+      ) : null}
       <div className="risk-table" role="table" aria-label="Top inventory risks">
         <div className="table-row table-head" role="row">
           <span>Item</span>

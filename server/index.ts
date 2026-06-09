@@ -1,12 +1,22 @@
 import cors from "cors";
 import express from "express";
 import { seedData } from "./data/seed";
-import { createDemoFivetranAdapter } from "./services/fivetranAdapter";
+import { createGeminiReasoningService } from "./services/geminiReasoning";
+import { createDemoFivetranMcpClient, createFivetranMcpAdapter } from "./services/fivetranMcp";
 import { createMissionService } from "./services/mission";
 
 const app: express.Express = express();
 const port = Number(process.env.PORT ?? 8787);
-let service = createMissionService(seedData, createDemoFivetranAdapter());
+
+function createRuntimeMissionService() {
+  return createMissionService(
+    seedData,
+    createFivetranMcpAdapter(createDemoFivetranMcpClient()),
+    createGeminiReasoningService()
+  );
+}
+
+let service = createRuntimeMissionService();
 
 app.use(cors({ origin: ["http://127.0.0.1:5173", "http://localhost:5173"] }));
 app.use(express.json());
@@ -59,7 +69,7 @@ app.post("/api/actions/:id/reject", async (request, response) => {
 
 app.post("/api/reset", async (_request, response) => {
   try {
-    service = createMissionService(seedData, createDemoFivetranAdapter());
+    service = createRuntimeMissionService();
     response.json(await service.reset());
   } catch (error) {
     sendError(response, error);

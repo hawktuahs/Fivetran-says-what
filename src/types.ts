@@ -64,6 +64,14 @@ export interface AuditEvent {
   message: string;
 }
 
+export interface AgentReasoning {
+  mode: "live" | "deterministic";
+  model: string;
+  actionNarrative: string;
+  riskNarrative: string;
+  confidence: "low" | "medium" | "high";
+}
+
 export interface ActionPack {
   reorderItems: ForecastItem[];
   staffing: StaffingRecommendation[];
@@ -86,11 +94,15 @@ export interface MissionState {
   connectors: Connector[];
   pendingApprovals: ApprovalAction[];
   auditEvents: AuditEvent[];
+  reasoning?: AgentReasoning;
   forecast?: ForecastResult;
   actionPack?: ActionPack;
 }
 
 export interface AppState {
   fivetranMode: "demo" | "live";
+  fivetranTransport: "mcp-demo" | "mcp-live" | "rest-live";
+  geminiMode: "live" | "deterministic";
+  geminiModel: string;
   mission: MissionState;
 }
