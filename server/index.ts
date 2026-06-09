@@ -1,11 +1,13 @@
 import cors from "cors";
 import express from "express";
 import { seedData } from "./data/seed";
+import { loadLocalEnv } from "./env";
 import { createGeminiReasoningService } from "./services/geminiReasoning";
 import { createDemoFivetranMcpClient, createFivetranMcpAdapter } from "./services/fivetranMcp";
 import { createMissionService } from "./services/mission";
 
 const app: express.Express = express();
+loadLocalEnv();
 const port = Number(process.env.PORT ?? 8787);
 
 function createRuntimeMissionService() {

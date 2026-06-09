@@ -7,6 +7,7 @@
     "dev": "concurrently \"vite --host 127.0.0.1\" \"tsx watch server/index.ts\"",
     "dev:web": "vite --host 127.0.0.1",
     "dev:api": "tsx watch server/index.ts",
+    "check:setup": "tsx server/scripts/checkSetup.ts",
     "mcp:fivetran:demo": "tsx server/mcp/fivetranDemoServer.ts",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
