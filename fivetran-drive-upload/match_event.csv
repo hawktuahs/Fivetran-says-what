@@ -1,0 +1,2 @@
+event_id,venue,kickoff_at,expected_attendance,visitor_multiplier,weather_summary,high_fahrenheit,precipitation_chance
+wc-2026-g8,Metro World Cup Stadium,2026-06-11T16:00:00.000Z,64500,2.1,Warm and humid with a low rain chance,86,15

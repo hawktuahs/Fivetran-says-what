@@ -1,0 +1,5 @@
+supplier_id,name,email,cutoff_hour
+harbor-roasters,Harbor Roasters,orders@harborroasters.example,16
+stadium-bakery,Stadium Bakery,rush@stadiumbakery.example,15
+city-provisions,City Provisions,dispatch@cityprovisions.example,17
+matchday-goods,Matchday Goods,ops@matchdaygoods.example,14

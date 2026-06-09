@@ -1,0 +1,7 @@
+staff_id,name,role,hourly_cost,available_hours
+ana,Ana,barista,24,"8,9,10,11,12,13,14,15,16"
+marco,Marco,barista,23,"11,12,13,14,15,16,17,18"
+dev,Dev,cashier,20,"10,11,12,13,14,15,16,17"
+lena,Lena,cashier,21,"14,15,16,17,18,19,20"
+ivy,Ivy,runner,19,"12,13,14,15,16,17,18"
+sam,Sam,runner,19,"15,16,17,18,19,20"

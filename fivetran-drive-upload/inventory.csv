@@ -1,0 +1,9 @@
+sku,name,category,units_on_hand,unit_cost,unit_price,supplier,pack_size,lead_time_hours
+cold-brew-1l,Cold brew growler,beverage,38,5.50,14.00,harbor-roasters,12,8
+iced-latte,Iced latte cup,beverage,64,2.80,8.00,harbor-roasters,24,6
+sparkling-water,Sparkling water,beverage,52,1.10,4.00,city-provisions,24,5
+empanada,Chicken empanada,food,46,2.25,7.00,stadium-bakery,18,4
+veggie-wrap,Veggie wrap,food,22,3.20,9.00,stadium-bakery,12,4
+protein-bar,Protein bar,food,58,1.40,5.00,city-provisions,24,5
+team-scarf,Blue team scarf,merch,14,9.00,24.00,matchday-goods,10,12
+receipt-roll,Receipt roll,supplies,6,1.50,0.00,city-provisions,10,5
