@@ -7,7 +7,7 @@ import { createDemoFivetranMcpClient, createFivetranMcpAdapter } from "./service
 import { createMissionService } from "./services/mission";
 
 const app: express.Express = express();
-loadLocalEnv();
+loadLocalEnv({ override: true });
 const port = Number(process.env.PORT ?? 8787);
 
 function createRuntimeMissionService() {

@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { loadLocalEnv } from "../env";
 
-loadLocalEnv();
+loadLocalEnv({ override: true });
 
 const envPath = resolve(process.cwd(), ".env");
 const envSize = existsSync(envPath) ? readFileSync(envPath, "utf8").trim().length : 0;
