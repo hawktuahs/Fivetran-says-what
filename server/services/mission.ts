@@ -62,6 +62,17 @@ function initialMission(connectors = [] as MissionState["connectors"]): MissionS
   };
 }
 
+function findConnectorForFreshnessGate(connectors: MissionState["connectors"]) {
+  const stale = connectors.filter((connector) => connector.status !== "fresh");
+  return (
+    stale.find((connector) =>
+      [connector.id, connector.name, connector.source, connector.destination].some((value) =>
+        value.toLowerCase().includes("inventory")
+      )
+    ) ?? stale[0]
+  );
+}
+
 export function createMissionService(
   data: SeedData,
   fivetran: FivetranAdapter,
@@ -174,7 +185,7 @@ export function createMissionService(
       };
       await refreshConnectors();
 
-      const staleInventory = mission.connectors.find((connector) => connector.id === "inventory" && connector.status !== "fresh");
+      const staleInventory = findConnectorForFreshnessGate(mission.connectors);
       if (staleInventory) {
         mission = {
           ...mission,
@@ -213,13 +224,14 @@ export function createMissionService(
       };
 
       if (action.type === "sync") {
+        const connectorToSync = findConnectorForFreshnessGate(mission.connectors);
         mission = {
           ...mission,
           status: "forecasting",
           pendingApprovals: mission.pendingApprovals.filter((approval) => approval.id !== id),
           auditEvents: [...mission.auditEvents, createAuditEvent("agent", "mcp.fivetran/trigger_sync", "Triggered approved inventory sync through Fivetran MCP.")]
         };
-        await fivetran.triggerSync("inventory");
+        await fivetran.triggerSync(connectorToSync?.id ?? "inventory");
         await refreshConnectors();
         await completeActionPack();
       } else {
