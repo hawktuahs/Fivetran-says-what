@@ -29,6 +29,9 @@ interface GeminiServiceOptions {
   apiKey?: string;
   model?: string;
   fetchImpl?: typeof fetch;
+  maxRetries?: number;
+  retryDelayMs?: number;
+  requestTimeoutMs?: number;
 }
 
 interface GeminiPayload {
@@ -40,6 +43,11 @@ interface GeminiPayload {
 }
 
 const defaultModel = "gemini-3.5-flash";
+const transientStatuses = new Set([408, 429, 500, 502, 503, 504]);
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function deterministicReasoning(input: GeminiReasoningInput, model: string): GeminiReasoningResult {
   const stale = input.connectors.filter((connector) => connector.status !== "fresh");
@@ -118,6 +126,9 @@ export function createGeminiReasoningService(options: GeminiServiceOptions = {})
   const apiKey = options.apiKey ?? process.env.GEMINI_API_KEY ?? "";
   const model = options.model ?? process.env.GEMINI_MODEL ?? defaultModel;
   const fetchImpl = options.fetchImpl ?? fetch;
+  const maxRetries = options.maxRetries ?? 2;
+  const retryDelayMs = options.retryDelayMs ?? 500;
+  const requestTimeoutMs = options.requestTimeoutMs ?? 20_000;
 
   if (!apiKey) {
     return {
@@ -134,35 +145,56 @@ export function createGeminiReasoningService(options: GeminiServiceOptions = {})
     model,
     async reason(input) {
       try {
-        const response = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": apiKey
-          },
-          body: JSON.stringify({
-            system_instruction: {
-              parts: [
-                {
-                  text: "You are SurgePilot, an operations agent. Plan concrete actions, use Fivetran MCP as the data freshness gate, and require manager approval before side effects."
-                }
-              ]
-            },
-            contents: [{ parts: [{ text: buildPrompt(input) }] }],
-            generationConfig: {
-              responseMimeType: "application/json",
-              thinkingConfig: {
-                thinkingLevel: "low"
-              }
-            }
-          })
-        });
+        let response: Response | undefined;
+        let lastError: unknown;
 
-        if (!response.ok) {
+        for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+          try {
+            response = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-goog-api-key": apiKey
+              },
+              signal: AbortSignal.timeout(requestTimeoutMs),
+              body: JSON.stringify({
+                system_instruction: {
+                  parts: [
+                    {
+                      text: "You are SurgePilot, an operations agent. Plan concrete actions, use Fivetran MCP as the data freshness gate, and require manager approval before side effects."
+                    }
+                  ]
+                },
+                contents: [{ parts: [{ text: buildPrompt(input) }] }],
+                generationConfig: {
+                  responseMimeType: "application/json",
+                  thinkingConfig: {
+                    thinkingLevel: "low"
+                  }
+                }
+              })
+            });
+          } catch (error) {
+            lastError = error;
+            if (attempt === maxRetries) {
+              throw error;
+            }
+            await sleep(retryDelayMs * (attempt + 1));
+            continue;
+          }
+
+          if (!transientStatuses.has(response.status) || attempt === maxRetries) {
+            break;
+          }
+
+          await sleep(retryDelayMs * (attempt + 1));
+        }
+
+        if (!response?.ok) {
           const fallback = deterministicReasoning(input, model);
           return {
             ...fallback,
-            riskNarrative: `Live Gemini unavailable (${response.status}); ${fallback.riskNarrative}`
+            riskNarrative: `Live Gemini unavailable (${response?.status ?? (lastError instanceof Error ? lastError.message : "no response")}); ${fallback.riskNarrative}`
           };
         }
 

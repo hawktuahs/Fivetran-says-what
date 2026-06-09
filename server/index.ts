@@ -3,7 +3,12 @@ import express from "express";
 import { seedData } from "./data/seed";
 import { loadLocalEnv } from "./env";
 import { createGeminiReasoningService } from "./services/geminiReasoning";
-import { createDemoFivetranMcpClient, createFivetranMcpAdapter } from "./services/fivetranMcp";
+import {
+  createDemoFivetranMcpClient,
+  createFivetranMcpAdapter,
+  createLiveFivetranMcpClient,
+  createOfficialFivetranMcpAdapter
+} from "./services/fivetranMcp";
 import { createMissionService } from "./services/mission";
 
 const app: express.Express = express();
@@ -11,9 +16,14 @@ loadLocalEnv({ override: true });
 const port = Number(process.env.PORT ?? 8787);
 
 function createRuntimeMissionService() {
+  const hasFivetranCredentials = Boolean(process.env.FIVETRAN_API_KEY && process.env.FIVETRAN_API_SECRET);
+  const fivetran = hasFivetranCredentials
+    ? createOfficialFivetranMcpAdapter(createLiveFivetranMcpClient())
+    : createFivetranMcpAdapter(createDemoFivetranMcpClient());
+
   return createMissionService(
     seedData,
-    createFivetranMcpAdapter(createDemoFivetranMcpClient()),
+    fivetran,
     createGeminiReasoningService()
   );
 }

@@ -85,4 +85,53 @@ describe("Gemini reasoning service", () => {
     expect(result.mode).toBe("deterministic");
     expect(result.riskNarrative).toContain("Live Gemini unavailable");
   });
+
+  it("retries transient Gemini service errors before falling back", async () => {
+    let attempts = 0;
+    const service = createGeminiReasoningService({
+      apiKey: "test-key",
+      model: "gemini-3.5-flash",
+      retryDelayMs: 0,
+      fetchImpl: async () => {
+        attempts += 1;
+        if (attempts === 1) {
+          return new Response("temporarily unavailable", { status: 503 });
+        }
+
+        return new Response(
+          JSON.stringify({
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    {
+                      text: JSON.stringify({
+                        plan: ["Retry succeeded through Gemini"],
+                        actionNarrative: "Gemini recovered after a transient failure.",
+                        riskNarrative: "The mission can continue with live reasoning.",
+                        confidence: "high"
+                      })
+                    }
+                  ]
+                }
+              }
+            ]
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    });
+
+    const result = await service.reason({
+      mission: "Prepare us for tomorrow's match-day surge with a $2,000 budget.",
+      budget: 2000,
+      data: seedData,
+      forecast: buildForecast(seedData, { budget: 2000 }),
+      connectors: seedData.connectors
+    });
+
+    expect(attempts).toBe(2);
+    expect(result.mode).toBe("live");
+    expect(result.actionNarrative).toContain("recovered");
+  });
 });

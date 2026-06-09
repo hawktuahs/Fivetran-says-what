@@ -9,6 +9,7 @@
     "dev:api": "tsx watch server/index.ts",
     "check:setup": "tsx server/scripts/checkSetup.ts",
     "check:gemini": "tsx server/scripts/checkGemini.ts",
+    "check:fivetran-mcp": "tsx server/scripts/checkFivetranMcp.ts",
     "mcp:fivetran:demo": "tsx server/mcp/fivetranDemoServer.ts",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",

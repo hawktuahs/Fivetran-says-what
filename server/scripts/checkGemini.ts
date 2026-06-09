@@ -4,39 +4,49 @@ loadLocalEnv({ override: true });
 
 const apiKey = process.env.GEMINI_API_KEY;
 const model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
-const timeout = AbortSignal.timeout(15_000);
+const transientStatuses = new Set([408, 429, 500, 502, 503, 504]);
 
 if (!apiKey) {
   console.error("GEMINI_API_KEY is missing.");
   process.exit(1);
 }
 
-let response: Response;
+let response: Response | undefined;
+let lastError: unknown;
 
-try {
-  response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": apiKey
-    },
-    signal: timeout,
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: "Reply with exactly: ok" }] }]
-    })
-  });
-} catch (error) {
-  const message = error instanceof Error ? error.message : String(error);
+for (let attempt = 0; attempt < 3; attempt += 1) {
+  try {
+    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey
+      },
+      signal: AbortSignal.timeout(20_000),
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: "Reply with exactly: ok" }] }]
+      })
+    });
+  } catch (error) {
+    lastError = error;
+    if (attempt === 2) {
+      break;
+    }
 
-  console.error(`Gemini model check could not reach Google for ${model}.`);
-  console.error(message);
-  console.error("Check your internet connection, VPN/firewall, and then rerun: corepack pnpm check:gemini");
-  process.exit(1);
+    await new Promise((resolve) => setTimeout(resolve, 750 * (attempt + 1)));
+    continue;
+  }
+
+  if (!transientStatuses.has(response.status) || attempt === 2) {
+    break;
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 750 * (attempt + 1)));
 }
 
-if (!response.ok) {
-  console.error(`Gemini model check failed for ${model}: ${response.status}`);
-  console.error(await response.text());
+if (!response?.ok) {
+  console.error(`Gemini model check failed for ${model}: ${response?.status ?? "no response"}`);
+  console.error(response ? await response.text() : lastError instanceof Error ? lastError.message : "No response returned.");
   process.exit(1);
 }
 
