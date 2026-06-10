@@ -11,5 +11,5 @@
     "outDir": "../dist-server",
     "rootDir": ".."
   },
-  "include": ["../server/**/*.ts", "../tests/**/*.ts"]
+  "include": ["../api/**/*.ts", "../server/**/*.ts", "../tests/**/*.ts"]
 }

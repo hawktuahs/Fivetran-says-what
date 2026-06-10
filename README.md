@@ -80,7 +80,7 @@ It supports:
 
 ## Live Fivetran MCP Path
 
-When Fivetran credentials are configured, SurgePilot starts the official Fivetran MCP server over stdio and calls live tools such as `list_connections`, `get_connection_details`, and `sync_connection`. Without credentials, the app uses a deterministic local MCP-compatible client so judges can still run the prototype.
+When Fivetran credentials are configured locally, SurgePilot starts the official Fivetran MCP server over stdio and calls live tools such as `list_connections`, `get_connection_details`, and `sync_connection`. Without credentials, or when `FIVETRAN_MCP_MODE=demo`, the app uses a deterministic local MCP-compatible client so judges can still run the prototype.
 
 The official Fivetran MCP command documented by Fivetran is:
 
@@ -94,9 +94,12 @@ Set these environment variables before using the official server:
 FIVETRAN_API_KEY=...
 FIVETRAN_API_SECRET=...
 FIVETRAN_ALLOW_WRITES=false
+FIVETRAN_MCP_MODE=auto
 FIVETRAN_MCP_COMMAND=uvx
 FIVETRAN_MCP_ARGS=--from git+https://github.com/fivetran/fivetran-mcp fivetran-mcp
 ```
+
+Use `FIVETRAN_MCP_MODE=live` for local live-MCP demos, `demo` for hosted demos, or `auto` to use live MCP only when credentials and the local MCP command are available.
 
 The production MCP tool contract should expose:
 
@@ -137,6 +140,21 @@ corepack pnpm check:gemini
 corepack pnpm check:fivetran-mcp
 corepack pnpm mcp:fivetran:demo
 ```
+
+## Vercel Deployment
+
+The repository includes `vercel.json` and an `api/[...path].ts` function so Vercel can deploy the Vite frontend and API routes together.
+
+Recommended Vercel environment variables:
+
+```bash
+GEMINI_API_KEY=...
+GEMINI_MODEL=gemini-3.5-flash
+GEMINI_FALLBACK_MODELS=gemini-2.5-flash
+FIVETRAN_MCP_MODE=demo
+```
+
+Vercel serverless functions do not reliably provide the local `uvx` runtime needed to spawn the official Fivetran MCP subprocess, so the hosted demo should use `FIVETRAN_MCP_MODE=demo`. Keep the local environment on `auto` or `live` when demonstrating the verified live Fivetran MCP integration.
 
 ## Devpost Checklist
 
