@@ -193,14 +193,14 @@ export function createMissionService(
           pendingApprovals: [
             createApproval(
               "sync",
-              "Trigger Fivetran inventory sync",
+              "Trigger Fivetran data sync",
               `${staleInventory.name} data is ${staleInventory.freshnessMinutes} minutes old.`,
-              "Refreshes BigQuery inventory before Gemini creates operational actions."
+              "Refreshes destination data before Gemini creates operational actions."
             )
           ],
           auditEvents: [
             ...mission.auditEvents,
-            createAuditEvent("agent", "mcp.fivetran/get_connector", "Inventory connector is stale, so sync requires manager approval.")
+            createAuditEvent("agent", "mcp.fivetran/get_connector", "A Fivetran connector is stale, so sync requires manager approval.")
           ]
         };
         return mission;
@@ -229,7 +229,7 @@ export function createMissionService(
           ...mission,
           status: "forecasting",
           pendingApprovals: mission.pendingApprovals.filter((approval) => approval.id !== id),
-          auditEvents: [...mission.auditEvents, createAuditEvent("agent", "mcp.fivetran/trigger_sync", "Triggered approved inventory sync through Fivetran MCP.")]
+          auditEvents: [...mission.auditEvents, createAuditEvent("agent", "mcp.fivetran/trigger_sync", "Triggered approved data sync through Fivetran MCP.")]
         };
         await fivetran.triggerSync(connectorToSync?.id ?? "inventory");
         await refreshConnectors();

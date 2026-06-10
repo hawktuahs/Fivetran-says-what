@@ -66,6 +66,10 @@ function minutesSince(value: string | undefined) {
   return Math.max(0, Math.round((Date.now() - timestamp) / 60_000));
 }
 
+function firstString(...values: unknown[]) {
+  return values.find((value): value is string => typeof value === "string" && value.trim().length > 0);
+}
+
 function toRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
@@ -87,8 +91,9 @@ function mapConnectionToConnector(value: unknown, index = 0): Connector {
   const service = String(connection.service ?? connection.connector_type ?? connection.source ?? "Fivetran source");
   const schema = String(connection.schema ?? connection.destination_schema ?? connection.name ?? id);
   const syncState = String(statusRecord.sync_state ?? connection.sync_state ?? connection.status ?? "").toLowerCase();
-  const lastSyncAt = String(connection.succeeded_at ?? connection.last_successful_sync_at ?? connection.last_sync_at ?? new Date(0).toISOString());
-  const freshnessMinutes = minutesSince(lastSyncAt);
+  const rawLastSyncAt = firstString(connection.succeeded_at, connection.last_successful_sync_at, connection.last_sync_at);
+  const freshnessMinutes = rawLastSyncAt ? minutesSince(rawLastSyncAt) : 999;
+  const lastSyncAt = rawLastSyncAt ?? new Date(Date.now() - freshnessMinutes * 60_000).toISOString();
   const status: Connector["status"] =
     syncState.includes("failed") || syncState.includes("broken")
       ? "failed"

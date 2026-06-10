@@ -67,6 +67,12 @@ describe("Fivetran MCP boundary", () => {
                         schema: "ops_inventory",
                         status: { sync_state: "paused" },
                         succeeded_at: new Date(Date.now() - 90 * 60_000).toISOString()
+                      },
+                      {
+                        id: "metadata",
+                        service: "fivetran_log",
+                        schema: "fivetran_metadata",
+                        status: { sync_state: "paused" }
                       }
                     ]
                   }
@@ -103,6 +109,7 @@ describe("Fivetran MCP boundary", () => {
     const synced = await adapter.triggerSync("inventory");
 
     expect(connectors[0]).toMatchObject({ id: "inventory", status: "stale" });
+    expect(connectors[1]).toMatchObject({ id: "metadata", status: "stale", freshnessMinutes: 999 });
     expect(synced).toMatchObject({ id: "inventory", status: "syncing" });
     expect(calls).toEqual([
       {

@@ -134,4 +134,55 @@ describe("Gemini reasoning service", () => {
     expect(result.mode).toBe("live");
     expect(result.actionNarrative).toContain("recovered");
   });
+
+  it("uses a live fallback model when the primary model stays unavailable", async () => {
+    const requests: string[] = [];
+    const service = createGeminiReasoningService({
+      apiKey: "test-key",
+      model: "gemini-3.5-flash",
+      fallbackModels: ["gemini-2.5-flash"],
+      maxRetries: 0,
+      fetchImpl: async (url) => {
+        requests.push(String(url));
+        if (String(url).includes("gemini-3.5-flash")) {
+          return new Response("overloaded", { status: 503 });
+        }
+
+        return new Response(
+          JSON.stringify({
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    {
+                      text: JSON.stringify({
+                        plan: ["Fallback live model planned the mission"],
+                        actionNarrative: "Gemini fallback model kept live reasoning available.",
+                        riskNarrative: "The primary model was unavailable, but live reasoning continued.",
+                        confidence: "medium"
+                      })
+                    }
+                  ]
+                }
+              }
+            ]
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    });
+
+    const result = await service.reason({
+      mission: "Prepare us for tomorrow's match-day surge with a $2,000 budget.",
+      budget: 2000,
+      data: seedData,
+      forecast: buildForecast(seedData, { budget: 2000 }),
+      connectors: seedData.connectors
+    });
+
+    expect(requests[0]).toContain("gemini-3.5-flash");
+    expect(requests[1]).toContain("gemini-2.5-flash");
+    expect(result.mode).toBe("live");
+    expect(result.model).toBe("gemini-2.5-flash");
+  });
 });

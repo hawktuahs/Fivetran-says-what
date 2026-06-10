@@ -28,6 +28,7 @@ export interface GeminiReasoningService {
 interface GeminiServiceOptions {
   apiKey?: string;
   model?: string;
+  fallbackModels?: string[];
   fetchImpl?: typeof fetch;
   maxRetries?: number;
   retryDelayMs?: number;
@@ -47,6 +48,17 @@ const transientStatuses = new Set([408, 429, 500, 502, 503, 504]);
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function uniqueModels(models: string[]) {
+  return models.filter((modelName, index) => modelName.length > 0 && models.indexOf(modelName) === index);
+}
+
+function parseFallbackModels() {
+  return (process.env.GEMINI_FALLBACK_MODELS ?? "gemini-2.5-flash")
+    .split(",")
+    .map((modelName) => modelName.trim())
+    .filter(Boolean);
 }
 
 function deterministicReasoning(input: GeminiReasoningInput, model: string): GeminiReasoningResult {
@@ -125,6 +137,7 @@ function parseReasoning(text: string, input: GeminiReasoningInput, model: string
 export function createGeminiReasoningService(options: GeminiServiceOptions = {}): GeminiReasoningService {
   const apiKey = options.apiKey ?? process.env.GEMINI_API_KEY ?? "";
   const model = options.model ?? process.env.GEMINI_MODEL ?? defaultModel;
+  const modelCandidates = uniqueModels([model, ...(options.fallbackModels ?? parseFallbackModels())]);
   const fetchImpl = options.fetchImpl ?? fetch;
   const maxRetries = options.maxRetries ?? 2;
   const retryDelayMs = options.retryDelayMs ?? 500;
@@ -147,58 +160,67 @@ export function createGeminiReasoningService(options: GeminiServiceOptions = {})
       try {
         let response: Response | undefined;
         let lastError: unknown;
+        let activeModel = model;
 
-        for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
-          try {
-            response = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "x-goog-api-key": apiKey
-              },
-              signal: AbortSignal.timeout(requestTimeoutMs),
-              body: JSON.stringify({
-                system_instruction: {
-                  parts: [
-                    {
-                      text: "You are SurgePilot, an operations agent. Plan concrete actions, use Fivetran MCP as the data freshness gate, and require manager approval before side effects."
-                    }
-                  ]
+        for (const modelCandidate of modelCandidates) {
+          activeModel = modelCandidate;
+
+          for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+            try {
+              response = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${modelCandidate}:generateContent`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-goog-api-key": apiKey
                 },
-                contents: [{ parts: [{ text: buildPrompt(input) }] }],
-                generationConfig: {
-                  responseMimeType: "application/json",
-                  thinkingConfig: {
-                    thinkingLevel: "low"
+                signal: AbortSignal.timeout(requestTimeoutMs),
+                body: JSON.stringify({
+                  system_instruction: {
+                    parts: [
+                      {
+                        text: "You are SurgePilot, an operations agent. Plan concrete actions, use Fivetran MCP as the data freshness gate, and require manager approval before side effects."
+                      }
+                    ]
+                  },
+                  contents: [{ parts: [{ text: buildPrompt(input) }] }],
+                  generationConfig: {
+                    responseMimeType: "application/json",
+                    thinkingConfig: {
+                      thinkingLevel: "low"
+                    }
                   }
-                }
-              })
-            });
-          } catch (error) {
-            lastError = error;
-            if (attempt === maxRetries) {
-              throw error;
+                })
+              });
+            } catch (error) {
+              lastError = error;
+              if (attempt === maxRetries) {
+                break;
+              }
+              await sleep(retryDelayMs * (attempt + 1));
+              continue;
             }
+
+            if (!transientStatuses.has(response.status) || attempt === maxRetries) {
+              break;
+            }
+
             await sleep(retryDelayMs * (attempt + 1));
-            continue;
           }
 
-          if (!transientStatuses.has(response.status) || attempt === maxRetries) {
+          if (response?.ok) {
             break;
           }
-
-          await sleep(retryDelayMs * (attempt + 1));
         }
 
         if (!response?.ok) {
-          const fallback = deterministicReasoning(input, model);
+          const fallback = deterministicReasoning(input, activeModel);
           return {
             ...fallback,
             riskNarrative: `Live Gemini unavailable (${response?.status ?? (lastError instanceof Error ? lastError.message : "no response")}); ${fallback.riskNarrative}`
           };
         }
 
-        return parseReasoning(parseGeminiText((await response.json()) as GeminiPayload), input, model);
+        return parseReasoning(parseGeminiText((await response.json()) as GeminiPayload), input, activeModel);
       } catch (error) {
         const fallback = deterministicReasoning(input, model);
         return {
