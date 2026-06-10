@@ -3,7 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 export default async function handler(request: IncomingMessage, response: ServerResponse) {
   response.setHeader("Content-Type", "application/json");
   try {
-    const { vercelMissionService } = await import("../../../server/vercelApi");
+    const { vercelMissionService } = await import("../../../server/vercelApi.js");
     const id = request.url?.split("/").at(-2) ?? "";
     await vercelMissionService.rejectAction(id);
 

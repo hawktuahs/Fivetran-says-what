@@ -3,7 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 export default async function handler(request: IncomingMessage, response: ServerResponse) {
   response.setHeader("Content-Type", "application/json");
   try {
-    const { readJsonBody, vercelMissionService } = await import("../server/vercelApi");
+    const { readJsonBody, vercelMissionService } = await import("../server/vercelApi.js");
     const body = await readJsonBody(request);
     const prompt = typeof body.prompt === "string" ? body.prompt : "";
     await vercelMissionService.startMission(prompt);
