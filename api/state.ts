@@ -1,8 +1,13 @@
 import type { ServerResponse } from "node:http";
-import { vercelMissionService } from "../server/vercelApi";
 
 export default async function handler(_request: unknown, response: ServerResponse) {
-  response.statusCode = 200;
   response.setHeader("Content-Type", "application/json");
-  response.end(JSON.stringify(await vercelMissionService.getState()));
+  try {
+    const { vercelMissionService } = await import("../server/vercelApi");
+    response.statusCode = 200;
+    response.end(JSON.stringify(await vercelMissionService.getState()));
+  } catch (error) {
+    response.statusCode = 500;
+    response.end(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }));
+  }
 }
