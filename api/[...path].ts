@@ -1,12 +1,12 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { seedData } from "../server/data/seed";
 import { createGeminiReasoningService } from "../server/services/geminiReasoning";
-import { createDemoFivetranMcpClient, createFivetranMcpAdapter } from "../server/services/fivetranMcp";
+import { createDemoFivetranAdapter } from "../server/services/fivetranAdapter";
 import { createMissionService } from "../server/services/mission";
 
 const service = createMissionService(
   seedData,
-  createFivetranMcpAdapter(createDemoFivetranMcpClient()),
+  createDemoFivetranAdapter(),
   createGeminiReasoningService()
 );
 
