@@ -25,7 +25,18 @@ export default function App() {
   }, []);
 
   if (!state) {
-    return <main className="app-root loading-state">Loading SurgePilot...</main>;
+    return (
+      <main className="app-root loading-state">
+        {error ? (
+          <>
+            <h1>SurgePilot could not start</h1>
+            <p>{error}</p>
+          </>
+        ) : (
+          "Loading SurgePilot..."
+        )}
+      </main>
+    );
   }
 
   return (
