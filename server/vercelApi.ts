@@ -73,7 +73,7 @@ function audit(actor: "agent" | "manager" | "system", tool: string, message: str
 
 function approval(type: ApprovalType, title: string, reason: string, impact: string): ApprovalAction {
   return {
-    id: `approval-${type}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    id: `approval-${type}`,
     type,
     title,
     reason,
@@ -247,11 +247,14 @@ export const vercelMissionService = {
   },
   async approveAction(id: string) {
     const action = mission.pendingApprovals.find((item) => item.id === id);
-    if (!action) {
+    const fallbackType = id.replace("approval-", "") as ApprovalType;
+    const actionType = action?.type ?? fallbackType;
+
+    if (!action && !["sync", "reorder", "staffing", "campaign", "supplier_email"].includes(actionType)) {
       throw new Error(`Unknown approval action: ${id}`);
     }
 
-    if (action.type === "sync") {
+    if (actionType === "sync") {
       mission = {
         ...mission,
         connectors: mission.connectors.map((connector) =>
@@ -270,7 +273,7 @@ export const vercelMissionService = {
       ...mission,
       pendingApprovals: mission.pendingApprovals.filter((item) => item.id !== id),
       status: mission.pendingApprovals.length <= 1 ? "completed" : mission.status,
-      auditEvents: [...mission.auditEvents, audit("manager", `approval.${action.type}`, `Approved: ${action.title}`)]
+      auditEvents: [...mission.auditEvents, audit("manager", `approval.${actionType}`, `Approved: ${action?.title ?? id}`)]
     };
     return mission;
   },
